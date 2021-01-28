@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         optix: [ optix-7.1.0, optix-7.2.0 ]
-        cuda: [ 11-0, 11-1, 11-2 ]
+        cuda: [ 11.0, 11.1, 11.2 ]
 
     name: Build only (GPU with CUDA ${{ matrix.cuda }}, ${{ matrix.optix }})
 
@@ -51,7 +51,7 @@ jobs:
       id: cache-cuda
       uses: actions/cache@v2
       with:
-        path: /usr/local
+        path: /usr/local/cuda-${{ matrix.cuda }}
         key: ${{ matrix.cuda }}
 
     - name: Install CUDA
@@ -61,11 +61,9 @@ jobs:
         sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
         sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
         sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
-        sudo apt install -y cuda-compiler-${{ matrix.cuda }} cuda-libraries-${{ matrix.cuda }} cuda-libraries-dev-${{ matrix.cuda }}
-        cuda=`echo ${{ matrix.cuda }} | tr - .`
-        echo CUDA $cuda
-        echo /usr/local/cuda-${cuda}/bin >> $GITHUB_PATH
-        ls /usr/local/cuda-${cuda}/bin
+        cuda=`echo ${{ matrix.cuda }} | tr . -`
+        sudo apt install -y cuda-compiler-${cuda} cuda-libraries-${cuda} cuda-libraries-dev-${cuda}
+        echo /usr/local/cuda-${{ matrix.cuda }}/bin >> $GITHUB_PATH
         
     - name: Configure
       run: |
@@ -73,4 +71,5 @@ jobs:
         cmake .. -DPBRT_USE_PREGENERATED_RGB_TO_SPECTRUM_TABLES=True -DPBRT_OPTIX7_PATH=../optix/${{ matrix.optix }} -DPBRT_GPU_SHADER_MODEL=sm_80
       
     - name: Build
+      # We need to limit the number of jobs so that it doesn't OOM 
       run: cmake --build build --parallel 3 --config Release
