@@ -1,9 +1,14 @@
 name: ci
 
-on: [push, pull_request]
-  paths-ignore:
-  - '**.md'
-  - 'images/**'
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'images/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'images/**'
 
 jobs:
   build:
