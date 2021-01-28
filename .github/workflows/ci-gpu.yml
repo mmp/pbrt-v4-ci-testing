@@ -55,7 +55,9 @@ jobs:
         sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
         sudo apt install -y cuda-compiler-${{ matrix.cuda }} cuda-libraries-${{ matrix.cuda }}
         echo /usr/local/cuda/bin >> $GITHUB_PATH
-
+        ls /usr/local
+        ls /usr/local/cuda/bin
+        
     - name: Configure
       run: |
         cd build
