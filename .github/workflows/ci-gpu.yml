@@ -1,4 +1,4 @@
-name: ci-gpu
+name: ci-gpu-build
 
 on:
   push:
@@ -12,13 +12,13 @@ on:
 
 jobs:
   build:
-    name: Build only (GPU)
-
     strategy:
       fail-fast: false
       matrix:
         optix: [ optix-7.1.0, optix-7.2.0 ]
         cuda: [ 11-0, 11-1, 11-2 ]
+
+    name: Build only (GPU with CUDA ${{ matrix.cuda }}, ${{ matrix.optix }})
 
     runs-on: ubuntu-20.04
 
@@ -65,4 +65,4 @@ jobs:
         cmake .. -DPBRT_USE_PREGENERATED_RGB_TO_SPECTRUM_TABLES=True -DPBRT_OPTIX7_PATH=../optix/${{ matrix.optix }} -DPBRT_GPU_SHADER_MODEL=sm_80
       
     - name: Build
-      run: cmake --build build --parallel 2 --config Release
+      run: cmake --build build --parallel 3 --config Release
