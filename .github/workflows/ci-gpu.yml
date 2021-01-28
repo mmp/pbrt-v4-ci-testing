@@ -18,6 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         optix: [ optix-7.0.0, optix-7.1.0, optix-7.2.0 ]
+        cuda: [ cuda-11-1 ]
 
     runs-on: ubuntu-20.04
 
@@ -45,6 +46,16 @@ jobs:
 
     - name: Install OpenEXR
       run: sudo apt-get -y install libopenexr-dev
+
+    - name: Install CUDA
+      if: ${{ matrix.os == 'ubuntu-20.04' }}
+      run: |
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+        sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+        sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
+        sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
+        sudo apt install -y ${{ matrix.cuda }}
+        echo /usr/local/cuda-11.1/bin >> $GITHUB_PATH
 
     - name: Configure
       run: |
