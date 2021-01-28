@@ -56,8 +56,8 @@ jobs:
         sudo apt install -y cuda-compiler-${{ matrix.cuda }} cuda-libraries-${{ matrix.cuda }}
         cuda=`echo ${{ matrix.cuda }} | tr - .`
         echo CUDA $cuda
-        echo /usr/local/${cuda}/bin >> $GITHUB_PATH
-        ls /usr/local/${cuda}/bin
+        echo /usr/local/cuda-${cuda}/bin >> $GITHUB_PATH
+        ls /usr/local/cuda-${cuda}/bin
         
     - name: Configure
       run: |
