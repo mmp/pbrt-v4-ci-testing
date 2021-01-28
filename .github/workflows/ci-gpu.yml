@@ -62,6 +62,7 @@ jobs:
         sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
         sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
         cuda=`echo ${{ matrix.cuda }} | tr . -`
+        echo CUDA matrix ${{ matrix.cuda }} is now ${CUDA}
         sudo apt install -y cuda-compiler-${cuda} cuda-libraries-${cuda} cuda-libraries-dev-${cuda}
         echo /usr/local/cuda-${{ matrix.cuda }}/bin >> $GITHUB_PATH
         
