@@ -1,0 +1,59 @@
+name: ci-gpu
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'images/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'images/**'
+
+jobs:
+  build:
+    name: Build and test (GPU)
+
+    strategy:
+      fail-fast: false
+      matrix:
+        optix: [ optix-7.0.0, optix-7.1.0, optix-7.2.0 ]
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout pbrt
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Checkout rgb2spectrum tables
+      uses: actions/checkout@v2
+      with:
+        repository: mmp/rgb2spectrum
+        path: build
+
+    - name: Checkout OptiX headers
+      uses: actions/checkout@v2
+      with:
+        ssh-key: ${{ secrets.CHECKOUT_KEY }}
+        repository: mmp/optix-headers
+        path: optix
+
+    - name: Get cmake
+      uses: lukka/get-cmake@latest
+
+    - name: Install OpenEXR
+      run: sudo apt-get -y install libopenexr-dev
+
+    - name: Configure
+      run: |
+        cd build
+        cmake .. -DPBRT_USE_PREGENERATED_RGB_TO_SPECTRUM_TABLES=True -DPBRT_OPTIX7_PATH=../optix/${{ matrix.optix }}
+      
+    - name: Build
+      run: cmake --build build --parallel --config Release
+      
+    - name: Test
+      run: ./pbrt_test
+      working-directory: build
