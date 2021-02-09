@@ -5,6 +5,7 @@
 #ifndef PBRT_PBRT_H
 #define PBRT_PBRT_H
 
+
 #include <stdint.h>
 #include <cstddef>
 
