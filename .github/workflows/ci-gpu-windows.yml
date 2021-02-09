@@ -54,6 +54,7 @@ jobs:
 
     - name: Install CUDA
       run: |
+        ls inst
         .\inst\cuda_11.2.0_win10_network.exe -s nvcc_11.2 nsight_nvtx_11.2
         ls "C:\Program Files\"
         ls "C:\Program Files\NVIDIA GPU Computing Toolkit"
