@@ -17,10 +17,11 @@ jobs:
       matrix:
         optix: [ optix-7.1.0, optix-7.2.0 ]
         cuda: [ '11.0', '11.1', '11.2' ]
+        os: [ windows-latest ]
 
-    name: GPU Build Only (CUDA ${{ matrix.cuda }}, ${{ matrix.optix }})
+    name: GPU Build Only (${{ matrix.os }}, CUDA ${{ matrix.cuda }}, ${{ matrix.optix }})
 
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout pbrt
@@ -44,30 +45,17 @@ jobs:
     - name: Get cmake
       uses: lukka/get-cmake@latest
 
-    - name: Install OpenEXR
-      run: sudo apt-get -y install libopenexr-dev
-
-    - name: Make /usr/local world writable
-      run: sudo chmod 777 /usr/local
-
-    - name: Try to restore CUDA install from cache
-      id: cache-cuda
-      uses: actions/cache@v2
+    - name: Download CUDA
+      uses: suisei-cn/actions-download-file@v1
+      id: cuda-installer
       with:
-        path: /usr/local/cuda-${{ matrix.cuda }}
-        key: cuda-usr-local-${{ matrix.cuda }}
+        url: "https://developer.download.nvidia.com/compute/cuda/11.2.0/network_installers/cuda_11.2.0_win10_network.exe"
+        target: inst/
 
     - name: Install CUDA
-      if: steps.cache-cuda.outputs.cache-hit != 'true'
       run: |
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
-        sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
-        sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
-        sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
-        cuda=`echo ${{ matrix.cuda }} | tr . -`
-        sudo apt install -y cuda-compiler-${cuda} cuda-libraries-${cuda} cuda-libraries-dev-${cuda}
-        echo /usr/local/cuda-${{ matrix.cuda }}/bin >> $GITHUB_PATH
-        
+          .\inst\cuda_11.2.0_win10_network.exe -s nvcc_11.2 nsight_nvtx_11.2
+
     - name: Configure
       run: |
         cd build
