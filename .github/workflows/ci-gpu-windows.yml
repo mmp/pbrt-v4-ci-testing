@@ -49,15 +49,14 @@ jobs:
       uses: suisei-cn/actions-download-file@v1
       id: cuda-installer
       with:
-        #url: "https://developer.download.nvidia.com/compute/cuda/11.2.0/network_installers/cuda_11.2.0_win10_network.exe"
-        url: " https://developer.download.nvidia.com/compute/cuda/11.2.0/local_installers/cuda_11.2.0_460.89_win10.exe"
+        url: "https://developer.download.nvidia.com/compute/cuda/11.2.0/network_installers/cuda_11.2.0_win10_network.exe"
         target: inst/
 
     - name: Install CUDA
-      # .\inst\cuda_11.2.0_win10_network.exe -s nvcc_11.2 nsight_nvtx_11.2
       run: |
         ls inst
-        .\inst\cuda_11.2.0_460.89_win10.exe -s nvcc_11.2 nsight_nvtx_11.2
+        .\inst\cuda_11.2.0_win10_network.exe -s nvcc_11.2 nsight_nvtx_11.2
+        ls "D:\"
         ls "C:\Program Files\"
         ls "C:\Program Files\NVIDIA GPU Computing Toolkit"
         ls "C:\Program Files\NVIDIA GPU Computing Toolkit\v11.2"
