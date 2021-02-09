@@ -62,8 +62,7 @@ jobs:
         key: cuda-usr-local-${{ matrix.cuda }}
 
     - name: Install CUDA (Ubuntu)
-      if: ${{ matrix.os == 'ubuntu-20.04' }}
-      if: steps.cache-cuda.outputs.cache-hit != 'true'
+      if: ${{ matrix.os == 'ubuntu-20.04' }} && steps.cache-cuda.outputs.cache-hit != 'true'
       run: |
         wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
         sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
