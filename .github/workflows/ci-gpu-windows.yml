@@ -55,6 +55,7 @@ jobs:
     - name: Install CUDA
       run: |
         ls inst
+        .\inst\cuda_11.2.0_win10_network.exe -h
         .\inst\cuda_11.2.0_win10_network.exe -s nvcc_11.2 nsight_nvtx_11.2
         ls "D:\"
         ls "C:\Program Files\"
