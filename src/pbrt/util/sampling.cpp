@@ -25,9 +25,8 @@
 namespace pbrt {
 
 // Sampling Function Definitions
-pstd::array<Float, 3> SampleSphericalTriangle(const pstd::array<Point3f, 3> &v,
-                                              const Point3f &p, const Point2f &u,
-                                              Float *pdf) {
+pstd::array<Float, 3> SampleSphericalTriangle(const pstd::array<Point3f, 3> &v, Point3f p,
+                                              Point2f u, Float *pdf) {
     if (pdf != nullptr)
         *pdf = 0;
     // Compute vectors _a_, _b_, and _c_ to spherical triangle vertices
@@ -47,42 +46,40 @@ pstd::array<Float, 3> SampleSphericalTriangle(const pstd::array<Point3f, 3> &v,
     n_bc = Normalize(n_bc);
     n_ca = Normalize(n_ca);
 
-    // Compute angles $\alpha$, $\beta$, and $\gamma$ at spherical triangle vertices
+    // Find angles $\alpha$, $\beta$, and $\gamma$ at spherical triangle vertices
     Float alpha = AngleBetween(n_ab, -n_ca);
     Float beta = AngleBetween(n_bc, -n_ab);
     Float gamma = AngleBetween(n_ca, -n_bc);
 
     // Uniformly sample triangle area $A$ to compute $A'$
-    Float A = alpha + beta + gamma - Pi;
-    if (A <= 0)
-        return {};
-    if (pdf != nullptr)
-        *pdf = 1 / A;
-    Float Ap = u[0] * A;
+    Float A_pi = alpha + beta + gamma;
+    Float Ap_pi = Lerp(u[0], Pi, A_pi);
+    if (pdf != nullptr) {
+        Float A = A_pi - Pi;
+        *pdf = (A <= 0) ? 0 : 1 / A;
+    }
 
-    // Compute $\sin \beta'$ and $\cos \beta'$ for point along _b_ for sampled area
+    // Find $\cos \beta'$ for point along _b_ for sampled area
     Float cosAlpha = std::cos(alpha), sinAlpha = std::sin(alpha);
-
-    Float sinPhi = std::sin(Ap) * cosAlpha - std::cos(Ap) * sinAlpha;
-    Float cosPhi = std::cos(Ap) * cosAlpha + std::sin(Ap) * sinAlpha;
-
-    Float uu = cosPhi - cosAlpha;
-    Float vv = sinPhi + sinAlpha * Dot(a, b) /* cos c */;
-    Float cosBetap = (((vv * cosPhi - uu * sinPhi) * cosAlpha - vv) /
-                      ((vv * sinPhi + uu * cosPhi) * sinAlpha));
+    Float sinPhi = -std::sin(Ap_pi) * cosAlpha + std::cos(Ap_pi) * sinAlpha;
+    Float cosPhi = -std::cos(Ap_pi) * cosAlpha - std::sin(Ap_pi) * sinAlpha;
+    Float k1 = cosPhi - cosAlpha;
+    Float k2 = sinPhi + sinAlpha * Dot(a, b) /* cos c */;
+    Float cosBp = ((DifferenceOfProducts(k2, cosPhi, k1, sinPhi)) * cosAlpha - k2) /
+                  ((SumOfProducts(k2, sinPhi, k1, cosPhi)) * sinAlpha);
     // Happens if the triangle basically covers the entire hemisphere.
     // We currently depend on calling code to detect this case, which
     // is sort of ugly/unfortunate.
-    CHECK(!IsNaN(cosBetap));
-    cosBetap = Clamp(cosBetap, -1, 1);
-    Float sinBetap = SafeSqrt(1 - cosBetap * cosBetap);
+    CHECK(!IsNaN(cosBp));
+    cosBp = Clamp(cosBp, -1, 1);
 
-    // Compute $c'$ along the arc between $b'$ and $a$
-    Vector3f cp = cosBetap * a + sinBetap * Normalize(GramSchmidt(c, a));
+    // Sample $c'$ along the arc between $b'$ and $a$
+    Float sinBp = SafeSqrt(1 - Sqr(cosBp));
+    Vector3f cp = cosBp * a + sinBp * Normalize(GramSchmidt(c, a));
 
     // Compute sampled spherical triangle direction and return barycentrics
     Float cosTheta = 1 - u[1] * (1 - Dot(cp, b));
-    Float sinTheta = SafeSqrt(1 - cosTheta * cosTheta);
+    Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
     Vector3f w = cosTheta * b + sinTheta * Normalize(GramSchmidt(cp, b));
     // Find barycentric coordinates for sampled direction _w_
     Vector3f e1(v[1] - v[0]), e2(v[2] - v[0]);
@@ -97,8 +94,7 @@ pstd::array<Float, 3> SampleSphericalTriangle(const pstd::array<Point3f, 3> &v,
     Float invDivisor = 1 / divisor;
     Vector3f s(p - v[0]);
     Float b1 = Dot(s, s1) * invDivisor;
-    Vector3f s2 = Cross(s, e1);
-    Float b2 = Dot(w, s2) * invDivisor;
+    Float b2 = Dot(w, Cross(s, e1)) * invDivisor;
 
     // Return clamped barycentrics for sampled direction
     b1 = Clamp(b1, 0, 1);
@@ -113,9 +109,8 @@ pstd::array<Float, 3> SampleSphericalTriangle(const pstd::array<Point3f, 3> &v,
 // Via Jim Arvo's SphTri.C
 Point2f InvertSphericalTriangleSample(const pstd::array<Point3f, 3> &v, const Point3f &p,
                                       const Vector3f &w) {
-    // TODO: is double precision really necessary here??
-    using Vector3d = Vector3<double>;
-    Vector3d a(v[0] - p), b(v[1] - p), c(v[2] - p);
+    // Compute vectors _a_, _b_, and _c_ to spherical triangle vertices
+    Vector3f a(v[0] - p), b(v[1] - p), c(v[2] - p);
     CHECK_GT(LengthSquared(a), 0);
     CHECK_GT(LengthSquared(b), 0);
     CHECK_GT(LengthSquared(c), 0);
@@ -123,58 +118,52 @@ Point2f InvertSphericalTriangleSample(const pstd::array<Point3f, 3> &v, const Po
     b = Normalize(b);
     c = Normalize(c);
 
-    // TODO: have a shared snippet that goes from here to computing
-    // alpha/beta/gamma, use it also in Triangle::SolidAngle().
-    Vector3d axb = Cross(a, b), bxc = Cross(b, c), cxa = Cross(c, a);
-    CHECK_RARE(1e-5, LengthSquared(axb) == 0 || LengthSquared(bxc) == 0 ||
-                         LengthSquared(cxa) == 0);
-    if (LengthSquared(axb) == 0 || LengthSquared(bxc) == 0 || LengthSquared(cxa) == 0)
-        return Point2f(0.5, 0.5);
+    // Compute normalized cross products of all direction pairs
+    Vector3f n_ab = Cross(a, b), n_bc = Cross(b, c), n_ca = Cross(c, a);
+    if (LengthSquared(n_ab) == 0 || LengthSquared(n_bc) == 0 || LengthSquared(n_ca) == 0)
+        return {};
+    n_ab = Normalize(n_ab);
+    n_bc = Normalize(n_bc);
+    n_ca = Normalize(n_ca);
 
-    axb = Normalize(axb);
-    bxc = Normalize(bxc);
-    cxa = Normalize(cxa);
+    // Find angles $\alpha$, $\beta$, and $\gamma$ at spherical triangle vertices
+    Float alpha = AngleBetween(n_ab, -n_ca);
+    Float beta = AngleBetween(n_bc, -n_ab);
+    Float gamma = AngleBetween(n_ca, -n_bc);
 
-    // See comment in Triangle::SolidAngle() for ordering...
-    double alpha = AngleBetween(cxa, -axb);
-    double beta = AngleBetween(axb, -bxc);
-    double gamma = AngleBetween(bxc, -cxa);
-
-    // Spherical area of the triangle.
-    double A = alpha + beta + gamma - Pi;
-
-    // Assume that w is normalized...
-
+    // Find vertex $\VEC{c'}$ along $\VEC{a}\VEC{c}$ arc for $\w{}$
     // Compute the new C vertex, which lies on the arc defined by b-w
     // and the arc defined by a-c.
-    Vector3d cp = Normalize(Cross(Cross(b, Vector3d(w)), Cross(c, a)));
-
+    Vector3f cp = Normalize(Cross(Cross(b, w), Cross(c, a)));
     // Adjust the sign of cp.  Make sure it's on the arc between A and C.
     if (Dot(cp, a + c) < 0)
         cp = -cp;
 
-    // Compute x1, the area of the sub-triangle over the original area.
-    // The AngleBetween() calls are computing the dihedral angles (a, b, cp)
-    // and (a, cp, b) respectively, FWIW...
-    Vector3d cnxb = Cross(cp, b), axcn = Cross(a, cp);
-    CHECK_RARE(1e-5, LengthSquared(cnxb) == 0 || LengthSquared(axcn) == 0);
-    if (LengthSquared(cnxb) == 0 || LengthSquared(axcn) == 0)
-        return Point2f(0.5, 0.5);
-    cnxb = Normalize(cnxb);
-    axcn = Normalize(axcn);
+    Float u0;
+    if (Dot(a, cp) > 0.99999847691f /* 0.1 degrees */)
+        u0 = 0;
+    else {
+        // Compute area $A'$ of sub-triangle
+        Vector3f n_cpb = Cross(cp, b), n_acp = Cross(a, cp);
+        CHECK_RARE(1e-5, LengthSquared(n_cpb) == 0 || LengthSquared(n_acp) == 0);
+        if (LengthSquared(n_cpb) == 0 || LengthSquared(n_acp) == 0)
+            return Point2f(0.5, 0.5);
+        n_cpb = Normalize(n_cpb);
+        n_acp = Normalize(n_acp);
+        Float Ap_pi = alpha + AngleBetween(n_ab, n_cpb) + AngleBetween(n_acp, -n_cpb);
 
-    Float sub_area = alpha + AngleBetween(axb, cnxb) + AngleBetween(axcn, -cnxb) - Pi;
-    Float u0 = sub_area / A;
-
-    // Now compute the second coordinate using the new C vertex.
-    Float z = Dot(Vector3d(w), b);
+        // Compute first sample value, which gives the area $A'$
+        Float A_pi = alpha + beta + gamma;
+        u0 = (Ap_pi - Pi) / (A_pi - Pi);
+    }
+    // Compute second sample value for $\w{}$ along $\VEC{b}\VEC{c'}$ and return result
+    Float z = Dot(w, b);
     Float u1 = (1 - z) / (1 - Dot(cp, b));
-
     return Point2f(Clamp(u0, 0, 1), Clamp(u1, 0, 1));
 }
 
 Point3f SampleSphericalRectangle(const Point3f &pRef, const Point3f &s,
-                                 const Vector3f &ex, const Vector3f &ey, const Point2f &u,
+                                 const Vector3f &ex, const Vector3f &ey, Point2f u,
                                  Float *pdf) {
     // Compute local reference frame and transform rectangle coordinates
     Float exl = Length(ex), eyl = Length(ey);

@@ -1,4 +1,4 @@
-name: ci-gpu-build
+name: gpu-build-only
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
         optix: [ optix-7.1.0, optix-7.2.0 ]
         cuda: [ '11.0', '11.1', '11.2' ]
 
-    name: Build only (GPU with CUDA ${{ matrix.cuda }}, ${{ matrix.optix }})
+    name: GPU Build Only (CUDA ${{ matrix.cuda }}, ${{ matrix.optix }})
 
     runs-on: ubuntu-20.04
 
@@ -47,12 +47,15 @@ jobs:
     - name: Install OpenEXR
       run: sudo apt-get -y install libopenexr-dev
 
+    - name: Make /usr/local world writable
+      run: sudo chmod 777 /usr/local
+
     - name: Try to restore CUDA install from cache
       id: cache-cuda
       uses: actions/cache@v2
       with:
         path: /usr/local/cuda-${{ matrix.cuda }}
-        key: ${{ matrix.cuda }}
+        key: cuda-usr-local-${{ matrix.cuda }}
 
     - name: Install CUDA
       if: steps.cache-cuda.outputs.cache-hit != 'true'
@@ -62,7 +65,6 @@ jobs:
         sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
         sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
         cuda=`echo ${{ matrix.cuda }} | tr . -`
-        echo CUDA matrix ${{ matrix.cuda }} is now ${CUDA}
         sudo apt install -y cuda-compiler-${cuda} cuda-libraries-${cuda} cuda-libraries-dev-${cuda}
         echo /usr/local/cuda-${{ matrix.cuda }}/bin >> $GITHUB_PATH
         
