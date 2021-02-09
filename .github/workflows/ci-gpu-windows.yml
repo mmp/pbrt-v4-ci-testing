@@ -1,4 +1,4 @@
-name: gpu-build-only
+name: windows-gpu-build-only
 
 on:
   push:
@@ -51,10 +51,10 @@ jobs:
       with:
         url: "https://developer.download.nvidia.com/compute/cuda/11.2.0/network_installers/cuda_11.2.0_win10_network.exe"
         target: inst/
+        filename: install.exe
 
     - name: Install CUDA
-      run: |
-          .\inst\cuda_11.2.0_win10_network.exe -s nvcc_11.2 nsight_nvtx_11.2
+      run: .\inst\install.exe -s nvcc_11.2 nsight_nvtx_11.2
 
     - name: Configure
       run: |
