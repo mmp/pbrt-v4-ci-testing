@@ -75,7 +75,7 @@ jobs:
     - name: Download CUDA (Windows)
       if: ${{ matrix.os == 'windows-latest' }}
       uses: suisei-cn/actions-download-file@v1
-      id: cuda-installer
+      id: cuda-installer 
       with:
         url: "https://developer.download.nvidia.com/compute/cuda/11.2.0/network_installers/cuda_11.2.0_win10_network.exe"
         target: inst/
